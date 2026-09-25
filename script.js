@@ -1,84 +1,58 @@
-//vars
-var copyBusy = false;
-var copyBusy2 = false;
+(function () {
+	var canClip = !!(navigator.clipboard && window.isSecureContext);
+	var canExec = false;
+	try {
+		canExec = !!(document.queryCommandSupported && document.queryCommandSupported("copy"));
+	} catch (e) {}
+	if (!canClip && !canExec) return;
 
-// functions
-const backBtn = () => {
-	let el = document.getElementsByClassName("article");
-	for (let i = 0; i < el.length; i++) {
-		el[i].classList.remove("show-article");
-	}
-	document.getElementById("main-article").classList.add("show-article");
-};
-const showArticles = (page) => {
-	page = page + "-article";
-	document.getElementById("main-article").classList.remove("show-article");
-	document.getElementById(page).classList.add("show-article");
-};
-
-function SelectText(element) {}
-
-// $(function () {
-// 	$("p").click(function () {
-// 		SelectText("selectme");
-// 	});
-// });
-
-const copyToClipboard = (element) => {
-	if (copyBusy) return;
-	copyBusy = true;
-	var doc = document,
-		text = doc.getElementById(element),
-		range,
-		selection;
-	if (doc.body.createTextRange) {
-		range = document.body.createTextRange();
-		range.moveToElementText(text);
-		range.select();
-	} else if (window.getSelection) {
-		selection = window.getSelection();
-		range = document.createRange();
-		range.selectNodeContents(text);
-		selection.removeAllRanges();
-		selection.addRange(range);
+	var buttons = document.querySelectorAll("[data-copy]");
+	for (var i = 0; i < buttons.length; i++) {
+		buttons[i].removeAttribute("hidden");
+		buttons[i].addEventListener("click", onClick);
 	}
 
-	/* Copy the text inside the text field */
-	document.execCommand("copy");
-
-	/* Alert the copied text */
-	document.getElementById("copy-title-termial-1").classList.add("show-title");
-	setTimeout(() => {
-		document.getElementById("copy-title-termial-1").classList.remove("show-title");
-		copyBusy = false;
-	}, 2000);
-};
-const copyToClipboard2 = (element) => {
-	if (copyBusy2) return;
-	copyBusy2 = true;
-	var doc = document,
-		text = doc.getElementById(element),
-		range,
-		selection;
-	if (doc.body.createTextRange) {
-		range = document.body.createTextRange();
-		range.moveToElementText(text);
-		range.select();
-	} else if (window.getSelection) {
-		selection = window.getSelection();
-		range = document.createRange();
-		range.selectNodeContents(text);
-		selection.removeAllRanges();
-		selection.addRange(range);
+	function onClick() {
+		var btn = this;
+		var link = document.getElementById(btn.getAttribute("data-copy"));
+		if (!link || btn.getAttribute("data-busy")) return;
+		var url = link.href;
+		if (canClip) {
+			navigator.clipboard.writeText(url).then(
+				function () { flash(btn, true); },
+				function () { flash(btn, legacyCopy(url)); }
+			);
+		} else {
+			flash(btn, legacyCopy(url));
+		}
 	}
 
-	/* Copy the text inside the text field */
-	document.execCommand("copy");
+	function legacyCopy(text) {
+		var ta = document.createElement("textarea");
+		ta.value = text;
+		ta.setAttribute("readonly", "");
+		ta.style.position = "fixed";
+		ta.style.top = "-9999px";
+		document.body.appendChild(ta);
+		ta.select();
+		var ok = false;
+		try {
+			ok = document.execCommand("copy");
+		} catch (e) {}
+		document.body.removeChild(ta);
+		return ok;
+	}
 
-	/* Alert the copied text */
-	document.getElementById("copy-title-termial-2").classList.add("show-title");
-	setTimeout(() => {
-		document.getElementById("copy-title-termial-2").classList.remove("show-title");
-		copyBusy2 = false;
-	}, 2000);
-};
+	function flash(btn, ok) {
+		var label = btn.getElementsByTagName("span")[0];
+		var text = label.textContent;
+		btn.setAttribute("data-busy", "1");
+		btn.className += ok ? " is-ok" : " is-err";
+		label.textContent = ok ? "لینک کپی شد" : "کپی نشد";
+		setTimeout(function () {
+			label.textContent = text;
+			btn.className = btn.className.replace(/ is-(ok|err)/g, "");
+			btn.removeAttribute("data-busy");
+		}, 2000);
+	}
+})();
